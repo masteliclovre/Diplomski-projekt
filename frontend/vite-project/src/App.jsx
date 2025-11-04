@@ -3,10 +3,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import RegistrationPage from "./pages/RegistrationPage";
 import Login from "./pages/Login";
 
-
-
-
-
 function App() {
   return(<BrowserRouter>
   <Routes>
@@ -18,4 +14,4 @@ function App() {
   </BrowserRouter>);
 }
 
-export default App
+export default App;
