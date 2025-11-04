@@ -29,7 +29,7 @@
 .page-footer button {
   border: none;
   background: none;
-  color: #3b82f6;
+  color: #2563eb;
   padding: 0;
   font: inherit;
   cursor: pointer;
@@ -118,7 +118,7 @@ button {
   font-size: 1rem;
   font-weight: 600;
   background: #2563eb;
-  color: #ffffff;
+  color: #000;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -135,7 +135,7 @@ button:disabled {
 
 button.secondary {
   background: #ffffff;
-  color: #2563eb;
+  color: #000;
   border: 1px solid #d2d6dc;
   box-shadow: none;
 }
@@ -152,6 +152,7 @@ button.secondary:hover {
 }
 
 .dashboard-section {
+  color: #000;
   background: #f8fafc;
   border-radius: 16px;
   padding: 1.5rem;
