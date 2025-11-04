@@ -9,7 +9,7 @@ function RegistrationPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRepeat, setPasswordRepeat] = useState("");
-  const [role, setRole] = useState("korisnik");
+  const [role, setRole] = useState("user"); 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -106,7 +106,7 @@ function RegistrationPage() {
           <label>
             Uloga
             <select value={role} onChange={(event) => setRole(event.target.value)}>
-              <option value="korisnik">Korisnik</option>
+              <option value="user">Korisnik</option>
               <option value="admin">Administrator</option>
             </select>
           </label>

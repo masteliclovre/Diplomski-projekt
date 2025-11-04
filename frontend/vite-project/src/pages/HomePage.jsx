@@ -51,7 +51,7 @@ function HomePage() {
       }
       const data = await response.json();
       setStats(data);
-      setGlobalError
+      setGlobalError(""); 
     } catch (error) {
       console.error(error);
       setGlobalError(error.message);
