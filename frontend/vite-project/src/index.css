@@ -40,6 +40,11 @@ h2 {
 
 }
 
+h3 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -71,4 +76,8 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+* {
+  box-sizing: border-box;
 }

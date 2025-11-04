@@ -1,77 +1,130 @@
 import '../App.css'
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 
 function RegistrationPage() {
-    const [email, setEmail] = useState("");
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [password2, setPassword2] = useState("");
-  
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      console.log("Username:", username);
-      console.log("Email:", email);
-      console.log("Password:", password);
-      console.log("Password2:", password2);
-      alert(`Submitted`);
-      
-    };
+    const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordRepeat, setPasswordRepeat] = useState("");
+  const [role, setRole] = useState("user"); 
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    return(<>
-    <h1>Register</h1>
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      navigate("/");
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+
+    if (password !== passwordRepeat) {
+      setError("Lozinke se ne podudaraju.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password, role }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "Neuspjela registracija.");
+      }
+
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="page-container">
+      <h1>Registracija</h1>
+      <p className="page-subtitle">
+        Ispunite obrazac kako biste kreirali korisnički račun i pristupili sustavu.
+      </p>
+
       <div className="card">
-        <form onSubmit={handleSubmit}>
-          <div>
-            
+      <form className="form" onSubmit={handleSubmit}>
+          <label>
+            Korisničko ime
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Username"
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="Unesite korisničko ime"
               required
             />
-          </div>
-          <div style={{ marginTop: "7%" }}>
-          <input
-              type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="E-mail"
-              required
-            />
-            </div>
-        
+          </label>
 
-          <div style={{ marginTop: "7%" }}>
-     
+          <label>
+            E-mail
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Unesite e-mail"
+              required
+            />
+          </label>
+        <label>
+            Lozinka
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Unesite lozinku"
               required
             />
-          </div>
-
-          <div style={{ marginTop: "7%" }}>
-     
+          </label>
+          <label>
+            Ponovi lozinku
             <input
               type="password"
-              value={password2}
-              onChange={(e) => setPassword2(e.target.value)}
-              placeholder="Repeat password"
+              value={passwordRepeat}
+              onChange={(event) => setPasswordRepeat(event.target.value)}
+              placeholder="Ponovite lozinku"
               required
             />
-          </div>
+            </label>
 
-          <button type="submit" style={{ marginTop: "30%" }}>
-            Register
+          <label>
+            Uloga
+            <select value={role} onChange={(event) => setRole(event.target.value)}>
+              <option value="user">Korisnik</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </label>
+
+          {error && <div className="error-message">{error}</div>}
+          <button type="submit" disabled={loading}>
+            {loading ? "Slanje..." : "Registriraj se"}
           </button>
-          </form>
+        </form>
       </div>
-    </>
-    );
-
+    <p className="page-footer">
+        Već imate račun? {" "}
+        <button type="button" onClick={() => navigate("/login")}>
+          Prijavite se
+        </button>
+      </p>
+    </div>
+  );
 }
 
 export default RegistrationPage;
