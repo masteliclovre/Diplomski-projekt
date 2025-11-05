@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -16,7 +17,8 @@ app.add_middleware(
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Pydantic modeli za request/response
@@ -221,7 +223,7 @@ def get_samples(
         } for s in samples
     ]
 
-@app.get("/variants", response_model=List[VariantResponse])
+@app.get("/variants", response_model=VariantListResponse)
 def get_variants(
     chromosome: Optional[str] = None,
     position: Optional[int] = None,
@@ -310,19 +312,3 @@ def get_variants(
             )
         )
     return VariantListResponse(total=total, items=items)
-    query = db.query(Variant)
-    if chromosome:
-        query = query.join(Variant.chromosome).filter(Variant.chromosome.has(name=chromosome))
-    if position:
-        query = query.filter(Variant.position == position)
-    variants = query.order_by(Variant.position).limit(limit).all()
-    return [
-        {
-            "id": v.id,
-            "chromosome_name": v.chromosome.name if v.chromosome else None,
-            "position": v.position,
-            "reference_allele": v.reference_allele,
-            "alternate_allele": v.alternate_allele,
-            "variant_type": v.variant_type
-        } for v in variants
-    ]
