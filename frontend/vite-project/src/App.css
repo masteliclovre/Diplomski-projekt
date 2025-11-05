@@ -201,9 +201,24 @@ button.secondary:hover {
   flex-wrap: wrap;
 }
 
-.search-controls input {
+.search-controls input,
+.search-controls select {
   flex: 1 1 200px;
 }
+
+.pagination-controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.pagination-controls span {
+  font-weight: 600;
+}
+
 
 .table-section {
   color: #000;
