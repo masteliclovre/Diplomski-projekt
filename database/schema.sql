@@ -38,7 +38,11 @@ CREATE TABLE variants (
     position BIGINT NOT NULL,
     reference_allele VARCHAR(1000) NOT NULL,
     alternate_allele VARCHAR(1000) NOT NULL,
-    variant_type VARCHAR(20)
+    variant_type VARCHAR(20),
+    quality FLOAT,
+    filter_status VARCHAR(50),
+    total_depth INTEGER,
+    aditional_info TEXT
 );
 
 CREATE INDEX idx_variants_position ON variants(chromosome_id, position);

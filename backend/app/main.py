@@ -1,11 +1,12 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from app.database import get_db, User, Gene, Sample, Variant, get_db
+from app.database import get_db, User, Gene, Sample, Variant, get_db, SampleGenotype
 from app.auth import hash_password, verify_password, create_access_token, decode_access_token
 
 app = FastAPI(title="Cattle Genomics API")
@@ -16,7 +17,8 @@ app.add_middleware(
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Pydantic modeli za request/response
@@ -56,6 +58,13 @@ class SampleResponse(BaseModel):
     name: str
     breed: Optional[str]
 
+class SampleGenotypeResponse(BaseModel):
+    sample_name: str
+    genotype: Optional[str]
+    
+    class Config:
+        from_attributes = True
+
 class VariantResponse(BaseModel):
     id: int
     chromosome_name: Optional[str]
@@ -63,6 +72,17 @@ class VariantResponse(BaseModel):
     reference_allele: Optional[str]
     alternate_allele: Optional[str]
     variant_type: Optional[str]
+    quality: Optional[float]
+    filter_status: Optional[str]
+    total_depth: Optional[int]
+    sample_genotypes: List[SampleGenotypeResponse] = []
+
+    class Config:
+        from_attributes = True
+
+class VariantListResponse(BaseModel):
+    total: int
+    items: List[VariantResponse]
     
 class DashboardStats(BaseModel):
     total_genes: int
@@ -174,7 +194,7 @@ def get_genes(
 
     if search:
         like_term = f"%{search}%"
-        query = query.filter(or_(Gene.gene_name.contains(search)), Gene.gene_id.ilike(like_term))
+        query = query.filter(or_((Gene.gene_name.contains(search)), Gene.gene_id.ilike(like_term)))
     genes = query.order_by(Gene.gene_name).limit(limit).all()
     return [
         {
@@ -203,28 +223,92 @@ def get_samples(
         } for s in samples
     ]
 
-@app.get("/variants", response_model=List[VariantResponse])
+@app.get("/variants", response_model=VariantListResponse)
 def get_variants(
     chromosome: Optional[str] = None,
     position: Optional[int] = None,
-    limit: int = 100,
+    start_position: Optional[int] = None,
+    end_position: Optional[int] = None,
+    variant_type: Optional[str] = None,
+    filter_status: Optional[str] = None,
+    min_quality: Optional[float] = None,
+    sample_name: Optional[str] = None,
+    reference: Optional[str] = None,
+    alternate: Optional[str] = None,
+    limit: int = 25,
+    offset: int = 0,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     del current_user
-    query = db.query(Variant)
+
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+
+    query = db.query(Variant).options(
+        joinedload(Variant.chromosome),
+        joinedload(Variant.sample_genotypes).joinedload(SampleGenotype.sample)
+    )
+
     if chromosome:
-        query = query.join(Variant.chromosome).filter(Variant.chromosome.has(name=chromosome))
+        query = query.filter(Variant.chromosome.has(name=chromosome))
     if position:
         query = query.filter(Variant.position == position)
-    variants = query.order_by(Variant.position).limit(limit).all()
-    return [
-        {
-            "id": v.id,
-            "chromosome_name": v.chromosome.name if v.chromosome else None,
-            "position": v.position,
-            "reference_allele": v.reference_allele,
-            "alternate_allele": v.alternate_allele,
-            "variant_type": v.variant_type
-        } for v in variants
-    ]
+    else:
+        if start_position:
+            query = query.filter(Variant.position >= start_position)
+        if end_position:
+            query = query.filter(Variant.position <= end_position)
+    if variant_type:
+        query = query.filter(Variant.variant_type.ilike(f"%{variant_type}%"))
+    if filter_status:
+        if filter_status == "PASS":
+            query = query.filter(Variant.filter_status == "PASS")
+        else:
+            query = query.filter(Variant.filter_status.ilike(f"%{filter_status}%"))
+    if min_quality:
+        query = query.filter(Variant.quality >= min_quality)
+    if sample_name:
+        query = query.filter(Variant.sample_genotypes.any(SampleGenotype.sample.has(sample_name=sample_name)))
+    if reference:
+        query = query.filter(Variant.reference_allele.ilike(f"%{reference}%"))
+    if alternate:
+        query = query.filter(Variant.alternate_allele.ilike(f"%{alternate}%"))
+
+    total = query.count()
+    variants = (
+        query
+        .order_by(Variant.chromosome_id, Variant.position)
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    items: List[VariantResponse] = []
+    for variant in variants:
+        sample_data = [
+            SampleGenotypeResponse(
+                sample_name=sg.sample_name,
+                genotype=sg.genotype
+            )
+            for sg in sorted(
+                variant.sample_genotypes,
+                key=lambda sg: sg.sample.sample_name if sg.sample else ""
+            )
+        ]
+
+        items.append(
+            VariantResponse(
+                id=variant.id,
+                chromosome_name=variant.chromosome.name if variant.chromosome else None,
+                position=variant.position,
+                reference_allele=variant.reference_allele,
+                alternate_allele=variant.alternate_allele,
+                variant_type=variant.variant_type,
+                quality=variant.quality,
+                filter_status=variant.filter_status,
+                total_depth=variant.total_depth,
+                sample_genotypes=sample_data
+            )
+        )
+    return VariantListResponse(total=total, items=items)
