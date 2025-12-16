@@ -1,4 +1,5 @@
 import os
+from sqlalchemy import Integer, cast
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -8,6 +9,12 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from app.database import get_db, User, Gene, Sample, Variant, get_db, SampleGenotype
 from app.auth import hash_password, verify_password, create_access_token, decode_access_token
+import logging
+from sqlalchemy import func
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 app = FastAPI(title="Cattle Genomics API")
 security = HTTPBearer()
@@ -178,6 +185,29 @@ def get_dashboard_stats(current_user: User = Depends(get_current_user), db: Sess
         total_variants = db.query(Variant).count()
     )
 
+@app.get("/genes/{gene_id}", response_model=GeneResponse)
+def get_gene_by_id(
+    gene_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Dohvati gen po gene_id (jedinstveni ID gena)
+    """
+    gene = db.query(Gene).filter(Gene.gene_id == gene_id).first()
+    if not gene:
+        raise HTTPException(status_code=404, detail="Gen nije pronađen")
+
+    return GeneResponse(
+        id=gene.id,
+        gene_id=gene.gene_id,
+        gene_name=gene.gene_name,
+        chromosome_name=gene.chromosome.name if gene.chromosome else None,
+        start_position=gene.start_position,
+        end_position=gene.end_position,
+        gene_type=gene.gene_type
+    )
+
 @app.get("/genes", response_model=List[GeneResponse])
 def get_genes(
     chromosome: Optional[str] = None,
@@ -287,15 +317,16 @@ def get_variants(
     items: List[VariantResponse] = []
     for variant in variants:
         sample_data = [
-            SampleGenotypeResponse(
-                sample_name=sg.sample_name,
-                genotype=sg.genotype
-            )
-            for sg in sorted(
-                variant.sample_genotypes,
-                key=lambda sg: sg.sample.sample_name if sg.sample else ""
-            )
-        ]
+                SampleGenotypeResponse(
+                    sample_name=sg.sample.sample_name if sg.sample else None,
+                    genotype=sg.genotype
+                )
+                for sg in sorted(
+                    variant.sample_genotypes,
+                    key=lambda sg: sg.sample.sample_name if sg.sample else ""
+                )
+            ]
+
 
         items.append(
             VariantResponse(
@@ -311,4 +342,70 @@ def get_variants(
                 sample_genotypes=sample_data
             )
         )
+    return VariantListResponse(total=total, items=items)
+
+@app.get("/genes/{gene_id}/variants", response_model=VariantListResponse)
+def get_variants_by_gene(
+    gene_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    gene = db.query(Gene).filter(Gene.gene_id == gene_id).first()
+    if not gene:
+        raise HTTPException(status_code=404, detail="Gen nije pronađen")
+
+    gene_start = int(gene.start_position)
+    gene_end = int(gene.end_position)
+    gene_chr_id = gene.chromosome_id
+    print(f"DEBUG: Gene {gene.gene_id} - start: {gene_start}, end: {gene_end}, chromosome: {gene.chromosome.name}")
+
+    #dohvati sve varijante
+    variants = db.query(Variant).options(
+        joinedload(Variant.chromosome),
+        joinedload(Variant.sample_genotypes).joinedload(SampleGenotype.sample)
+    ).all()
+
+    print(f"DEBUG: Total variants in database: {len(variants)}")
+
+    #filtriraj varijante unutar gena i na istom kromosomu
+    filtered_variants = []
+    for v in variants:
+        v_pos = int(v.position)
+        v_chr_id = v.chromosome_id
+        in_interval = (v_chr_id == gene_chr_id) and (gene_start <= v_pos <= gene_end)
+        print(f"DEBUG: Variant {v.id} at position {v_pos}, chromosome: {v.chromosome.name if v.chromosome else 'None'} - in gene interval? {in_interval}")
+        if in_interval:
+            filtered_variants.append(v)
+
+    total = len(filtered_variants)
+
+    items: List[VariantResponse] = []
+    for variant in filtered_variants:
+        sample_data = [
+            SampleGenotypeResponse(
+                sample_name=sg.sample.sample_name if sg.sample else None,
+                genotype=sg.genotype
+            )
+            for sg in sorted(
+                variant.sample_genotypes,
+                key=lambda sg: sg.sample.sample_name if sg.sample else ""
+            )
+        ]
+
+        items.append(
+            VariantResponse(
+                id=variant.id,
+                chromosome_name=variant.chromosome.name if variant.chromosome else None,
+                position=int(variant.position),
+                reference_allele=variant.reference_allele,
+                alternate_allele=variant.alternate_allele,
+                variant_type=variant.variant_type,
+                quality=variant.quality,
+                filter_status=variant.filter_status,
+                total_depth=variant.total_depth,
+                sample_genotypes=sample_data
+            )
+        )
+
+    print(f"DEBUG: Total variants in gene interval on same chromosome: {total}")
     return VariantListResponse(total=total, items=items)

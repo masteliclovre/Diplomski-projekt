@@ -3,6 +3,7 @@ from .database import SessionLocal, Chromosome, Gene
 chromosomes_file = "data\genome.fa.fai"  # kromosomi
 genes_file = "data\genes.gff3"  # geni
 
+
 db = SessionLocal()
 
 def parse_attributes(attr_string):

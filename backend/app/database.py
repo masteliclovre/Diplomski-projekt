@@ -51,9 +51,10 @@ class Variant(Base):
     quality = Column(Float)
     filter_status = Column(String(50))
     total_depth = Column(Integer)
-    aditional_info = Column(Text)
+    additional_info = Column(Text)
     chromosome = relationship("Chromosome", back_populates="variants")
     sample_genotypes = relationship("SampleGenotype", back_populates="variant", cascade="all, delete-orphan")
+
 
 class SampleGenotype(Base):
     __tablename__ = "sample_genotypes"
