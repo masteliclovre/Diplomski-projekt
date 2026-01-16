@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from app.database import get_db, User, Gene, Sample, Variant, get_db, SampleGenotype
-from app.auth import hash_password, verify_password, create_access_token, decode_access_token
+from database import get_db, User, Gene, Sample, Variant, get_db, SampleGenotype
+from auth import hash_password, verify_password, create_access_token, decode_access_token
 import logging
 from sqlalchemy import func
 
