@@ -1,10 +1,22 @@
-import '../App.css'
-import { useState, useEffect } from "react";
+import "../App.css";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config";
+import {
+  Anchor,
+  Button,
+  Card,
+  Container,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
 
 function Login() {
   const navigate = useNavigate();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -44,47 +56,51 @@ function Login() {
     }
   };
 
-return (
-    <div className="page-container">
-      <h1>Prijava</h1>
-      <p className="page-subtitle">Unesite svoje podatke za pristup sustavu.</p>
+  return (
+    <Container size="xs" py="xl">
+      <Stack gap="lg">
+        <div>
+          <Title order={2}>Prijava</Title>
+          <Text c="dimmed">Unesite svoje podatke za pristup sustavu.</Text>
+        </div>
 
-      <div className="card">
-        <form className="form" onSubmit={handleSubmit}>
-          <label>
-            Korisničko ime
-            <input
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="Unesite korisničko ime"
-              required
-            />
-          </label>
-          <label>
-              Lozinka
-              <input
-                type="password"
+        <Card withBorder radius="md" p="xl">
+          <form onSubmit={handleSubmit}>
+            <Stack gap="md">
+              <TextInput
+                label="Korisničko ime"
+                placeholder="Unesite korisničko ime"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+
+              <PasswordInput
+                label="Lozinka"
+                placeholder="Unesite lozinku"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              placeholder="Unesite lozinku"
-              required
-            />
-          </label>
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
 
-          {error && <div className="error-message">{error}</div>}
-          <button type="submit" disabled={loading}>
-            {loading ? "Prijavljivanje..." : "Prijavi se"}
-          </button>
-        </form>
-      </div>
-      <p className="page-footer">
-        Nemate račun? {" "}
-        <button type="button" onClick={() => navigate("/register")}>
-          Registrirajte se
-        </button>
-      </p>
-    </div>
+              {error && <Text c="red">{error}</Text>}
+
+              <Button type="submit" loading={loading}>
+                Prijavi se
+              </Button>
+            </Stack>
+          </form>
+        </Card>
+
+        <Text size="sm" c="dimmed">
+          Nemate račun?{" "}
+          <Anchor component="button" type="button" onClick={() => navigate("/register")}>
+            Registrirajte se
+          </Anchor>
+        </Text>
+      </Stack>
+    </Container>
   );
 }
+
 export default Login;

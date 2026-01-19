@@ -1,15 +1,28 @@
-import '../App.css'
-import { useState, useEffect } from "react";
+import "../App.css";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config";
+import {
+  Anchor,
+  Button,
+  Card,
+  Container,
+  PasswordInput,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
 
 function RegistrationPage() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRepeat, setPasswordRepeat] = useState("");
-  const [role, setRole] = useState("user"); 
+  const [role, setRole] = useState("user");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -53,77 +66,78 @@ function RegistrationPage() {
   };
 
   return (
-    <div className="page-container">
-      <h1>Registracija</h1>
-      <p className="page-subtitle">
-        Ispunite obrazac kako biste kreirali korisnički račun i pristupili sustavu.
-      </p>
+    <Container size="xs" py="xl">
+      <Stack gap="lg">
+        <div>
+          <Title order={2}>Registracija</Title>
+          <Text c="dimmed">
+            Ispunite obrazac kako biste kreirali korisnički račun i pristupili sustavu.
+          </Text>
+        </div>
 
-      <div className="card">
-      <form className="form" onSubmit={handleSubmit}>
-          <label>
-            Korisničko ime
-            <input
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="Unesite korisničko ime"
-              required
-            />
-          </label>
+        <Card withBorder radius="md" p="xl">
+          <form onSubmit={handleSubmit}>
+            <Stack gap="md">
+              <TextInput
+                label="Korisničko ime"
+                placeholder="Unesite korisničko ime"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
 
-          <label>
-            E-mail
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="Unesite e-mail"
-              required
-            />
-          </label>
-        <label>
-            Lozinka
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Unesite lozinku"
-              required
-            />
-          </label>
-          <label>
-            Ponovi lozinku
-            <input
-              type="password"
-              value={passwordRepeat}
-              onChange={(event) => setPasswordRepeat(event.target.value)}
-              placeholder="Ponovite lozinku"
-              required
-            />
-            </label>
+              <TextInput
+                label="E-mail"
+                type="email"
+                placeholder="Unesite e-mail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
 
-          <label>
-            Uloga
-            <select value={role} onChange={(event) => setRole(event.target.value)}>
-              <option value="user">Korisnik</option>
-              <option value="admin">Administrator</option>
-            </select>
-          </label>
+              <PasswordInput
+                label="Lozinka"
+                placeholder="Unesite lozinku"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
 
-          {error && <div className="error-message">{error}</div>}
-          <button type="submit" disabled={loading}>
-            {loading ? "Slanje..." : "Registriraj se"}
-          </button>
-        </form>
-      </div>
-    <p className="page-footer">
-        Već imate račun? {" "}
-        <button type="button" onClick={() => navigate("/login")}>
-          Prijavite se
-        </button>
-      </p>
-    </div>
+              <PasswordInput
+                label="Ponovi lozinku"
+                placeholder="Ponovite lozinku"
+                value={passwordRepeat}
+                onChange={(e) => setPasswordRepeat(e.target.value)}
+                required
+              />
+
+              <Select
+                label="Uloga"
+                value={role}
+                onChange={(value) => setRole(value || "user")}
+                data={[
+                  { value: "user", label: "Korisnik" },
+                  { value: "admin", label: "Administrator" },
+                ]}
+              />
+
+              {error && <Text c="red">{error}</Text>}
+
+              <Button type="submit" loading={loading}>
+                Registriraj se
+              </Button>
+            </Stack>
+          </form>
+        </Card>
+
+        <Text size="sm" c="dimmed">
+          Već imate račun?{" "}
+          <Anchor component="button" type="button" onClick={() => navigate("/login")}>
+            Prijavite se
+          </Anchor>
+        </Text>
+      </Stack>
+    </Container>
   );
 }
 

@@ -1,28 +1,35 @@
-import '../App.css'
+//import "../App.css";
 import { useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
-import { API_BASE_URL } from '../config';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { API_BASE_URL } from "../config";
+import {
+  Anchor,
+  Button,
+  Card,
+  Container,
+  Group,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
 
 const DEFAULT_VARIANT_LIMIT = 25;
 
 function HomePage() {
   const navigate = useNavigate();
+
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
   });
   const [token, setToken] = useState(() => localStorage.getItem("token"));
 
-
-  
   const [searchTerm, setSearchTerm] = useState("");
-
   const [globalError, setGlobalError] = useState("");
   const [searchError, setSearchError] = useState("");
 
- 
-
-  const isAuthenticated = Boolean(user && token);
+  const isAuthenticated = useMemo(() => Boolean(user && token), [user, token]);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
@@ -34,36 +41,39 @@ function HomePage() {
     navigate("/login");
   }, [navigate]);
 
-  const handleSearch = async() => {
-    if(!searchTerm.trim()) {
+  const handleSearch = async () => {
+    const query = searchTerm.trim();
+    if (!query) {
       setSearchError("Unesite ID gena.");
       return;
     }
-    const url = `${API_BASE_URL}/genes/${encodeURIComponent(searchTerm)}`;
-  console.log("Fetching:", url);
-    try{
-          const res= await fetch(`${API_BASE_URL}/genes/${encodeURIComponent(searchTerm)}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`,  // <- token ide ovdje
-          },
-          });
-          if (!res.ok) throw new Error("Greška");
-          const data = await res.json();
-          console.log(data);
-          if (data.length === 0) {
-            setSearchError("Nije pronađen nijedan gen s tim imenom.");
-          } else {
-            // pretpostavimo da uzmemo prvi rezultat
-             navigate(`/genes/${data.gene_id}`);
-          }
 
-  } catch (err) {
-    console.error(err);
-    setSearchError("Došlo je do pogreške prilikom pretraživanja.");
-  }
-  }
+    setSearchError("");
+    setGlobalError("");
 
-  
+    try {
+      const res = await fetch(`${API_BASE_URL}/genes/${encodeURIComponent(query)}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Greška");
+
+      const data = await res.json();
+
+      // Your API returns a gene object; keep behavior: go to /genes/{gene_id}
+      if (!data || !data.gene_id) {
+        setSearchError("Nije pronađen nijedan gen s tim imenom.");
+        return;
+      }
+
+      navigate(`/genes/${data.gene_id}`);
+    } catch (err) {
+      console.error(err);
+      setSearchError("Došlo je do pogreške prilikom pretraživanja.");
+    }
+  };
 
   useEffect(() => {
     const synchronizeAuthState = () => {
@@ -77,65 +87,89 @@ function HomePage() {
     return () => window.removeEventListener("storage", synchronizeAuthState);
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-     
-    }
-  }, []);
-
   const handleLoginClick = () => navigate("/login");
   const handleRegisterClick = () => navigate("/register");
 
+  // ---------- NOT AUTH ----------
   if (!isAuthenticated) {
     return (
-      <div className="page-container">
-        <h1>Početna stranica</h1>
-        <p className="page-subtitle">
-          Za nastavak rada prijavite se ili registrirajte novi korisnički račun.
-        </p>
-        <div className="action-buttons">
-          <button onClick={handleLoginClick}>Prijava</button>
-          <button onClick={handleRegisterClick}>Registracija</button>
-        </div>
-      </div>
+      <Container size="sm" py="xl">
+        <Stack gap="lg" align="center">
+          <Title order={2}>Početna stranica</Title>
+          <Text c="dimmed" ta="center">
+            Za nastavak rada prijavite se ili registrirajte novi korisnički račun.
+          </Text>
+
+          <Card withBorder radius="md" w="100%" maw={520} p="xl">
+            <Stack gap="md">
+              <Group justify="center">
+                <Button onClick={handleLoginClick}>Prijava</Button>
+                <Button variant="outline" onClick={handleRegisterClick}>
+                  Registracija
+                </Button>
+              </Group>
+              <Text size="sm" c="dimmed" ta="center">
+                Ako već imate račun, kliknite Prijava. Ako nemate, Registracija.
+              </Text>
+            </Stack>
+          </Card>
+        </Stack>
+      </Container>
     );
   }
 
+  // ---------- AUTH ----------
   return (
-    <div className="page-container">
-      <header className="page-header">
-        <div>
-          <h1>Dobrodošli, {user.username}!</h1>
-          <p className="page-subtitle">
-            U nastavku možete pregledati gene, uzorke i varijante.
-          </p>
-        </div>
-        <button onClick={handleLogout}>Odjava</button>
-      </header>
+    <Container size="md" py="xl">
+      <Stack gap="lg">
+        <Group justify="space-between" align="flex-start" wrap="wrap">
+          <div>
+            <Title order={2}>Dobrodošli, {user.username}!</Title>
+            <Text c="dimmed">
+              U nastavku možete pregledati gene, uzorke i varijante.
+            </Text>
+          </div>
+          <Button color="red" variant="outline" onClick={handleLogout}>
+            Odjava
+          </Button>
+        </Group>
 
-      {globalError && <div className="error-message">{globalError}</div>}
+        {globalError && (
+          <Card withBorder radius="md" p="md">
+            <Text c="red">{globalError}</Text>
+          </Card>
+        )}
 
-     
+        <Card withBorder radius="md" p="xl">
+          <Stack gap="sm">
+            <Title order={4}>Pretraga</Title>
 
-      <section className="search-section">
-       
-        <div className="search-controls">
-          <input
-            type="text"
-            placeholder="Unesite ID gena."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-         
-          <button onClick={handleSearch}>Pretraživanje
-          </button>
-        </div>
-        {searchError && <div className="error-message">{searchError}</div>}
-      </section>
+            <Group grow align="end">
+              <TextInput
+                label="Gene ID"
+                placeholder="Unesite ID gena."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
+              />
+              <Button onClick={handleSearch}>Pretraživanje</Button>
+            </Group>
 
-      
-      
-    </div>
+            <Text size="sm" c="dimmed">
+              Primjer: ENSBTAG00000004503
+            </Text>
+
+            {searchError && <Text c="red">{searchError}</Text>}
+          </Stack>
+        </Card>
+
+        <Text size="sm" c="dimmed">
+          Powered by your API at <Anchor href={API_BASE_URL} target="_blank"> {API_BASE_URL}</Anchor>
+        </Text>
+      </Stack>
+    </Container>
   );
 }
 
